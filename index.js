@@ -1,53 +1,33 @@
-import express from 'express';
-import mongoose from "mongoose";
-import songsRoutes from "./routes/songsRoute.js";
-import cors from "cors";
-import dotenv from 'dotenv';
-
-// const express = require(express());
-require('dotenv').config();
-
-// const app = express();
-
+// server.js
+const express = require('express');
+const { createProxyMiddleware } = require('http-proxy-middleware');
+const cors = require('cors'); // Import the CORS middleware
+const app = express();
 app.use(cors());
 
-app.use(express.json());
+// Proxy configuration
+const proxyOptions = {
+  target: 'https://api.deezer.com', // Target API to proxy requests to
+  changeOrigin: true, // Needed for virtual hosted sites
+  pathRewrite: {
+    '^/api': '', // Remove /api prefix when sending requests to the target
+  },
+  onProxyReq(proxyReq, req, res) {
+    // Modify headers if needed
+    // proxyReq.setHeader('Authorization', 'Bearer someToken');
+  }
+};
 
-app.use('/songs', songsRoutes);
+// Set up the proxy middleware
+app.use('/api', createProxyMiddleware(proxyOptions));
 
-app.use(express.urlencoded({ extended: true }));
-
-app.use('/uploads', express.static('uploads'));
-
-app.use(
-  cors({
-      origin:"http://localhost:3000",
-      methods:['GET','POST','PUT','DELETE'],
-      allowedHeaders:['Content-Type'],
-  })
-)
-
-app.get('/',(req,res) => {
-  return res.status(201).send('Welcome to my music App!')
-})
-
-const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/musicapp';
-const PORT = process.env.PORT || 3000;
-// const MONGO_URI = process.env.MONGO_URI;
-
-mongoose.connect(mongoURI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-
-.then(()=>{
-console.log('App is connected to the database');
-
-app.listen(PORT,() => {
-  console.log(`App is listening on port: ${PORT}`);
+// Example route to check if server is running
+app.get('/', (req, res) => {
+  res.send('Reverse Proxy Server is Running');
 });
 
-})
-.catch((err) => {
-  console.error('Error connecting to database');
-})
+// Start the server
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log(`Proxy server running at http://localhost:${PORT}`);
+});
